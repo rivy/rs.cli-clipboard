@@ -1,33 +1,17 @@
-# rust-clipboard
+# Coach Clipboard
 
-rust-clipboard is a cross-platform library for getting and setting the contents of the OS-level clipboard.  
-It has been tested on Windows, Mac OSX, GNU/Linux, and FreeBSD.
-It is used in Mozilla Servo.
-
-[![](http://meritbadge.herokuapp.com/clipboard)](https://crates.io/crates/clipboard)
-[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/aweinstock314/rust-clipboard)](https://ci.appveyor.com/project/aweinstock314/rust-clipboard)
-[![Travis Build Status](https://travis-ci.org/aweinstock314/rust-clipboard.svg?branch=master)](https://travis-ci.org/aweinstock314/rust-clipboard)
-
-## Prerequisites
-
-On Linux you need the x11 library, install it with something like:
-
-```bash
-sudo apt-get install xorg-dev
-```
+coach is a fork of [rust-clipboard](https://github.com/aweinstock314/rust-clipboard) that
+pulls in some open pull requests adding wayland support and updating to rust 2018. This means that it
+theoretically supports Windows, Mac OSX, Linux with Wayland or X11 and FreeBSD.
 
 ## Example
 
 ```rust
-extern crate clipboard;
-
-use clipboard::ClipboardProvider;
-use clipboard::ClipboardContext;
+use clipboard;
 
 fn example() {
-    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-    println!("{:?}", ctx.get_contents());
-    ctx.set_contents("some string".to_owned()).unwrap();
+    clipboard::set_contents("some string".to_owned()).unwrap();
+    assert_eq!(clipboard::get_contents().unwrap(), "some string");
 }
 ```
 
@@ -41,8 +25,19 @@ fn get_contents(&mut self) -> Result<String, Box<Error>>;
 fn set_contents(&mut self, String) -> Result<(), Box<Error>>;
 ```
 
-`ClipboardContext` is a type alias for one of {`WindowsClipboardContext`, `OSXClipboardContext`, `X11ClipboardContext`, `NopClipboardContext`}, all of which implement `ClipboardProvider`. Which concrete type is chosen for `ClipboardContext` depends on the OS (via conditional compilation).
+`ClipboardContext` is a type alias for one of {`WindowsClipboardContext`, `OSXClipboardContext`, `X11ClipboardContext`, `NopClipboardContext`}, all of which implement `ClipboardProvider`. Which concrete type is chosen for `ClipboardContext` depends on the OS (via conditional compilation). `WaylandClipboardContext` is also available but is never assigned to `ClipboardContext`.
+
+
+`get_contents` and `set_contents` are convenience functions that create a context for you and call the respective function on it. They correctly work on linux by attempting to create a wayland context and falling back to X11 if an error occurs.
+
+## Alternatives
+
+1. [copypasta - Another rust-clipboard fork adding wayland support](https://github.com/alacritty/copypasta)
+    The main difference is that copypasta only uses smithay-clipboard, while this library is mainly using
+    wl-clipboard-rs since I have not tested the smithay_clipboard code included here at all.  If you need
+    or want to use smithay_clipboard I highly recommend you use copypasta.
+1. [The original rust-clipboard](https://github.com/aweinstock314/rust-clipboard)
 
 ## License
 
-`rust-clipboard` is dual-licensed under MIT and Apache2.
+`coach` is dual-licensed under MIT and Apache2.

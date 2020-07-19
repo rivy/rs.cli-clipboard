@@ -14,6 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//! # Coach Clipboard
+//!
+//! coach is a fork of [rust-clipboard](https://github.com/aweinstock314/rust-clipboard) that
+//! pulls in some open pull requests adding wayland support and updating to rust 2018.
+//!
+//! Also adds convenience functions for [get_contents](fn.get_contents.html) and 
+//! [set_contents](fn.set_contents.html). These functions are particularly useful for 
+//! linux cli applications since they will attempt to use the wayland clipboard and 
+//! correctly fallback to X11.
+//!
+//! I have not tested with a wayland GUI application but it is theoretically implemented
+//! in WaylandClipboardContext.  The [get_contents](fn.get_contents.html) and 
+//! [set_contents](fn.set_contents.html) functions are unlikely to work in a wayland 
+//! GUI application.
+//!
+
 #![crate_name = "clipboard"]
 #![crate_type = "lib"]
 #![crate_type = "dylib"]
@@ -60,6 +76,8 @@ extern crate objc_foundation;
 #[cfg(target_os = "macos")]
 extern crate objc_id;
 
+use std::error::Error;
+
 mod common;
 pub use common::ClipboardProvider;
 
@@ -103,6 +121,77 @@ pub type ClipboardContext = nop_clipboard::NopClipboardContext; // TODO: impleme
     target_os = "emscripten"
 )))]
 pub type ClipboardContext = nop_clipboard::NopClipboardContext;
+
+/// Get the current clipboard contents
+///
+/// # Example
+/// ```
+/// clipboard::set_contents("testing".to_owned()).unwrap();
+/// assert_eq!(clipboard::get_contents().unwrap(), "testing");
+/// ```
+#[cfg(all(
+    unix,
+    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+))]
+pub fn get_contents()->Result<String, Box<dyn Error>> {
+    match WaylandClipboardContext::new() {
+        Ok(mut context) => {
+            context.get_contents()
+        },
+        Err(_) => {
+            let mut context = ClipboardContext::new()?;
+            context.get_contents()
+        }
+    }
+}
+
+#[cfg(all(
+    not(unix),
+    any(target_os = "macos", target_os = "android", target_os = "emscripten")
+))]
+pub fn get_contents()->Result<String, Box<dyn Error>> {
+    let mut context = ClipboardContext::new()?;
+    context.get_contents()
+}
+
+
+/// Write a string to the clipboard
+///
+/// Other users of the Wayland or X11 clipboard will only see the contents
+/// copied to the clipboard so long as the process copying to the
+/// clipboard exists. If you need the contents of the clipboard to
+/// remain after your application shuts down, consider daemonizing the
+/// clipboard components of your application.
+///
+/// # Example
+/// ```
+/// clipboard::set_contents("testing".to_owned()).unwrap();
+/// assert_eq!(clipboard::get_contents().unwrap(), "testing");
+/// ```
+#[cfg(all(
+    unix,
+    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+))]
+pub fn set_contents(data: String)->Result<(), Box<dyn Error>> {
+    match WaylandClipboardContext::new() {
+        Ok(mut context) => {
+            context.set_contents(data)
+        },
+        Err(_) => {
+            let mut context = ClipboardContext::new()?;
+            context.set_contents(data)
+        }
+    }
+}
+
+#[cfg(all(
+    not(unix),
+    any(target_os = "macos", target_os = "android", target_os = "emscripten")
+))]
+pub fn set_contents(data: String)->Result<(), Box<dyn Error>> {
+    let mut context = ClipboardContext::new()?;
+    context.set_contents(data)
+}
 
 #[test]
 fn test_clipboard() {

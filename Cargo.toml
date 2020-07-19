@@ -1,9 +1,9 @@
 [package]
 name = "clipboard"
 version = "0.5.0"
-authors = ["Avi Weinstock <aweinstock314@gmail.com>"]
-description = "rust-clipboard is a cross-platform library for getting and setting the contents of the OS-level clipboard."
-repository = "https://github.com/aweinstock314/rust-clipboard"
+authors = ["Andrew Stephan <thekiteeatingtree@gmail.com>"]
+description = "coach is a cross-platform library for getting and setting the contents of the OS-level clipboard."
+repository = "https://github.com/thekiteeatingtree/rust-clipboard"
 license = "MIT / Apache-2.0"
 keywords = ["clipboard"]
 
