@@ -41,9 +41,12 @@ use wl_clipboard_rs::{
 /// # Example
 ///
 /// ```
-/// let mut clipboard = WaylandClipboardContext::new().unwrap();
-/// let previous_contents = clipboard.get_contents().unwrap();
+/// use clipboard::ClipboardProvider;
+/// let mut clipboard = clipboard::wayland_clipboard::WaylandClipboardContext::new().unwrap();
 /// clipboard.set_contents("foo bar baz".to_string()).unwrap();
+/// let contents = clipboard.get_contents().unwrap();
+///
+/// assert_eq!(contents, "foo bar baz");
 /// ```
 pub struct WaylandClipboardContext {
     inner: Inner,
@@ -177,7 +180,7 @@ impl Inner {
         }
 
         options
-            .copy(copy::Source::Bytes(data.as_bytes()), copy::MimeType::Text)
+            .copy(copy::Source::Bytes(data.into_bytes().into()), copy::MimeType::Text)
             .map_err(into_boxed_error)
     }
 
@@ -236,7 +239,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn wayland_test() {
         let mut clipboard =
             WaylandClipboardContext::new().expect("couldn't create a Wayland clipboard");

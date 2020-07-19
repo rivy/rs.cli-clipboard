@@ -50,6 +50,7 @@ pub use common::ClipboardProvider;
 
 #[cfg(all(unix, not(any(target_os="macos", target_os="android", target_os="emscripten"))))]
 pub mod wayland_clipboard;
+pub use wayland_clipboard::WaylandClipboardContext;
 
 #[cfg(all(unix, not(any(target_os="macos", target_os="android", target_os="emscripten"))))]
 pub mod x11_clipboard;
