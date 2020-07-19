@@ -83,14 +83,13 @@ impl ClipboardProvider for WaylandClipboardContext {
     /// when operating in an X11 environment), will also return Err if
     /// the compositor does not support the data-control protocol.
     fn new() -> Result<WaylandClipboardContext, Box<dyn Error>> {
-        let supports_primary_selection =
-            match utils::is_primary_selection_supported() {
-                Ok(v) => v,
-                Err(e) => match e {
-                    utils::PrimarySelectionCheckError::NoSeats => false,
-                    _ => return Err(into_boxed_error(e)),
-                },
-            };
+        let supports_primary_selection = match utils::is_primary_selection_supported() {
+            Ok(v) => v,
+            Err(e) => match e {
+                utils::PrimarySelectionCheckError::NoSeats => false,
+                _ => return Err(into_boxed_error(e)),
+            },
+        };
 
         Ok(WaylandClipboardContext {
             inner: Inner::Cli {
@@ -180,7 +179,10 @@ impl Inner {
         }
 
         options
-            .copy(copy::Source::Bytes(data.into_bytes().into()), copy::MimeType::Text)
+            .copy(
+                copy::Source::Bytes(data.into_bytes().into()),
+                copy::MimeType::Text,
+            )
             .map_err(into_boxed_error)
     }
 
