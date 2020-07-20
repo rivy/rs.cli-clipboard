@@ -4,6 +4,8 @@
 
 cli-clipboard is a fork of [rust-clipboard](https://github.com/aweinstock314/rust-clipboard) that adds wayland support for terminal and window-less applications via [wl-clipboard-rs](https://github.com/YaLTeR/wl-clipboard-rs). For terminal applications it supports copy and paste for both wayland and X11 linux environments, macOS and windows.
 
+Consider this alpha software.  The tests pass on linux, macOS and windows but it has not yet been manually tested on every platform.
+
 ## Example
 
 ```rust

@@ -26,6 +26,9 @@ limitations under the License.
 //! linux cli applications since they will attempt to use the wayland clipboard and
 //! correctly fallback to X11.
 //!
+//! Consider this alpha software.  The tests pass on linux, macOS and windows but
+//! it has not yet been manually tested on every platform.
+//!
 
 #![crate_name = "cli_clipboard"]
 #![crate_type = "lib"]
