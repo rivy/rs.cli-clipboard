@@ -83,7 +83,6 @@ pub use common::ClipboardProvider;
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
 pub mod wayland_clipboard;
-pub use wayland_clipboard::WaylandClipboardContext;
 
 #[cfg(all(
     unix,
@@ -126,9 +125,14 @@ pub type ClipboardContext = nop_clipboard::NopClipboardContext;
 /// cli_clipboard::set_contents("testing".to_owned()).unwrap();
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
-#[cfg(all(
+#[cfg(any(
     unix,
-    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+    not(any(
+        windows,
+        target_os = "macos",
+        target_os = "android",
+        target_os = "emscripten"
+    ))
 ))]
 pub fn get_contents() -> Result<String, Box<dyn Error>> {
     match WaylandClipboardContext::new() {
@@ -140,10 +144,14 @@ pub fn get_contents() -> Result<String, Box<dyn Error>> {
     }
 }
 
-#[cfg(all(
-    not(unix),
-    any(target_os = "macos", target_os = "android", target_os = "emscripten")
-))]
+/// Get the current clipboard contents
+///
+/// # Example
+/// ```
+/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
+/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
+/// ```
+#[cfg(any(target_os = "macos", windows))]
 pub fn get_contents() -> Result<String, Box<dyn Error>> {
     let mut context = ClipboardContext::new()?;
     context.get_contents()
@@ -176,10 +184,20 @@ pub fn set_contents(data: String) -> Result<(), Box<dyn Error>> {
     }
 }
 
-#[cfg(all(
-    not(unix),
-    any(target_os = "macos", target_os = "android", target_os = "emscripten")
-))]
+/// Write a string to the clipboard
+///
+/// Other users of the Wayland or X11 clipboard will only see the contents
+/// copied to the clipboard so long as the process copying to the
+/// clipboard exists. If you need the contents of the clipboard to
+/// remain after your application shuts down, consider daemonizing the
+/// clipboard components of your application.
+///
+/// # Example
+/// ```
+/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
+/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
+/// ```
+#[cfg(any(target_os = "macos", windows))]
 pub fn set_contents(data: String) -> Result<(), Box<dyn Error>> {
     let mut context = ClipboardContext::new()?;
     context.set_contents(data)

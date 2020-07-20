@@ -2,6 +2,7 @@ extern crate cli_clipboard;
 
 #[cfg(target_os = "linux")]
 use cli_clipboard::x11_clipboard::{Primary, X11ClipboardContext};
+#[cfg(target_os = "linux")]
 use cli_clipboard::ClipboardProvider;
 
 #[cfg(target_os = "linux")]
