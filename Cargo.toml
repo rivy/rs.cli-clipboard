@@ -1,8 +1,8 @@
 [package]
-name = "clipboard"
+name = "cli-clipboard"
 version = "0.5.0"
 authors = ["Andrew Stephan <thekiteeatingtree@gmail.com>"]
-description = "coach is a cross-platform library for getting and setting the contents of the OS-level clipboard."
+description = "cli-clipboard is a cross-platform library for getting and setting the contents of the OS-level clipboard."
 repository = "https://github.com/thekiteeatingtree/rust-clipboard"
 license = "MIT / Apache-2.0"
 keywords = ["clipboard"]
@@ -20,4 +20,4 @@ failure = "0.1"
 smithay-clipboard = "0.1"
 wayland-client = "0.22"
 wl-clipboard-rs = "0.4"
-x11-clipboard = "0.3"
+x11-clipboard = "0.5.1"

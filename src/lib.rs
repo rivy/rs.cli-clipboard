@@ -14,23 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//! # Coach Clipboard
+//! # CLI Clipboard
 //!
-//! coach is a fork of [rust-clipboard](https://github.com/aweinstock314/rust-clipboard) that
-//! pulls in some open pull requests adding wayland support and updating to rust 2018.
+//! cli-clipboard is a fork of 
+//! [rust-clipboard](https://github.com/aweinstock314/rust-clipboard) that
+//! adds wayland support for terminal and window-less applications via 
+//! [wl-clipboard-rs](https://github.com/YaLTeR/wl-clipboard-rs)
 //!
 //! Also adds convenience functions for [get_contents](fn.get_contents.html) and 
 //! [set_contents](fn.set_contents.html). These functions are particularly useful for 
 //! linux cli applications since they will attempt to use the wayland clipboard and 
 //! correctly fallback to X11.
 //!
-//! I have not tested with a wayland GUI application but it is theoretically implemented
-//! in WaylandClipboardContext.  The [get_contents](fn.get_contents.html) and 
-//! [set_contents](fn.set_contents.html) functions are unlikely to work in a wayland 
-//! GUI application.
-//!
 
-#![crate_name = "clipboard"]
+#![crate_name = "cli_clipboard"]
 #![crate_type = "lib"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
@@ -126,8 +123,8 @@ pub type ClipboardContext = nop_clipboard::NopClipboardContext;
 ///
 /// # Example
 /// ```
-/// clipboard::set_contents("testing".to_owned()).unwrap();
-/// assert_eq!(clipboard::get_contents().unwrap(), "testing");
+/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
+/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
 #[cfg(all(
     unix,
@@ -165,8 +162,8 @@ pub fn get_contents()->Result<String, Box<dyn Error>> {
 ///
 /// # Example
 /// ```
-/// clipboard::set_contents("testing".to_owned()).unwrap();
-/// assert_eq!(clipboard::get_contents().unwrap(), "testing");
+/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
+/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
 #[cfg(all(
     unix,

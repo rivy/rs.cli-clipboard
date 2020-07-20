@@ -41,8 +41,8 @@ use wl_clipboard_rs::{
 /// # Example
 ///
 /// ```
-/// use clipboard::ClipboardProvider;
-/// let mut clipboard = clipboard::wayland_clipboard::WaylandClipboardContext::new().unwrap();
+/// use cli_clipboard::ClipboardProvider;
+/// let mut clipboard = cli_clipboard::WaylandClipboardContext::new().unwrap();
 /// clipboard.set_contents("foo bar baz".to_string()).unwrap();
 /// let contents = clipboard.get_contents().unwrap();
 ///
