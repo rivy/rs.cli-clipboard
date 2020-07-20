@@ -16,14 +16,14 @@ limitations under the License.
 
 //! # CLI Clipboard
 //!
-//! cli-clipboard is a fork of 
+//! cli-clipboard is a fork of
 //! [rust-clipboard](https://github.com/aweinstock314/rust-clipboard) that
-//! adds wayland support for terminal and window-less applications via 
+//! adds wayland support for terminal and window-less applications via
 //! [wl-clipboard-rs](https://github.com/YaLTeR/wl-clipboard-rs)
 //!
-//! Also adds convenience functions for [get_contents](fn.get_contents.html) and 
-//! [set_contents](fn.set_contents.html). These functions are particularly useful for 
-//! linux cli applications since they will attempt to use the wayland clipboard and 
+//! Also adds convenience functions for [get_contents](fn.get_contents.html) and
+//! [set_contents](fn.set_contents.html). These functions are particularly useful for
+//! linux cli applications since they will attempt to use the wayland clipboard and
 //! correctly fallback to X11.
 //!
 
@@ -130,11 +130,9 @@ pub type ClipboardContext = nop_clipboard::NopClipboardContext;
     unix,
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
-pub fn get_contents()->Result<String, Box<dyn Error>> {
+pub fn get_contents() -> Result<String, Box<dyn Error>> {
     match WaylandClipboardContext::new() {
-        Ok(mut context) => {
-            context.get_contents()
-        },
+        Ok(mut context) => context.get_contents(),
         Err(_) => {
             let mut context = ClipboardContext::new()?;
             context.get_contents()
@@ -146,11 +144,10 @@ pub fn get_contents()->Result<String, Box<dyn Error>> {
     not(unix),
     any(target_os = "macos", target_os = "android", target_os = "emscripten")
 ))]
-pub fn get_contents()->Result<String, Box<dyn Error>> {
+pub fn get_contents() -> Result<String, Box<dyn Error>> {
     let mut context = ClipboardContext::new()?;
     context.get_contents()
 }
-
 
 /// Write a string to the clipboard
 ///
@@ -169,11 +166,9 @@ pub fn get_contents()->Result<String, Box<dyn Error>> {
     unix,
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
-pub fn set_contents(data: String)->Result<(), Box<dyn Error>> {
+pub fn set_contents(data: String) -> Result<(), Box<dyn Error>> {
     match WaylandClipboardContext::new() {
-        Ok(mut context) => {
-            context.set_contents(data)
-        },
+        Ok(mut context) => context.set_contents(data),
         Err(_) => {
             let mut context = ClipboardContext::new()?;
             context.set_contents(data)
@@ -185,7 +180,7 @@ pub fn set_contents(data: String)->Result<(), Box<dyn Error>> {
     not(unix),
     any(target_os = "macos", target_os = "android", target_os = "emscripten")
 ))]
-pub fn set_contents(data: String)->Result<(), Box<dyn Error>> {
+pub fn set_contents(data: String) -> Result<(), Box<dyn Error>> {
     let mut context = ClipboardContext::new()?;
     context.set_contents(data)
 }

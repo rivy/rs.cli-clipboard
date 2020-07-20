@@ -24,7 +24,7 @@ pub trait ClipboardProvider: Sized {
     /// Method to get the clipboard contents as a String
     fn get_contents(&mut self) -> Result<String, Box<dyn Error>>;
     /// Method to set the clipboard contents as a String
-    fn set_contents(&mut self, String) -> Result<(), Box<dyn Error>>;
+    fn set_contents(&mut self, content: String) -> Result<(), Box<dyn Error>>;
     // TODO: come up with some platform-agnostic API for richer types
     // than just strings (c.f. issue #31)
 }
