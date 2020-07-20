@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use anyhow::{Result, anyhow};
 use crate::common::*;
+use anyhow::{anyhow, Result};
 use objc::runtime::{Class, Object};
 use objc_foundation::{INSArray, INSObject, INSString};
 use objc_foundation::{NSArray, NSDictionary, NSObject, NSString};
@@ -32,15 +32,14 @@ extern "C" {}
 
 impl ClipboardProvider for MacOSClipboardContext {
     fn new() -> Result<MacOSClipboardContext> {
-        let cls = Class::get("NSPasteboard").ok_or(anyhow!("Class::get(\"NSPasteboard\")"))?;
+        let cls =
+            Class::get("NSPasteboard").ok_or_else(|| anyhow!("Class::get(\"NSPasteboard\")"))?;
         let pasteboard: *mut Object = unsafe { msg_send![cls, generalPasteboard] };
         if pasteboard.is_null() {
             return Err(anyhow!("NSPasteboard#generalPasteboard returned null"));
         }
         let pasteboard: Id<Object> = unsafe { Id::from_ptr(pasteboard) };
-        Ok(MacOSClipboardContext {
-            pasteboard,
-        })
+        Ok(MacOSClipboardContext { pasteboard })
     }
 
     fn get_contents(&mut self) -> Result<String> {
@@ -73,11 +72,11 @@ impl ClipboardProvider for MacOSClipboardContext {
         let string_array = NSArray::from_vec(vec![NSString::from_str(&data)]);
         let _: usize = unsafe { msg_send![self.pasteboard, clearContents] };
         let success: bool = unsafe { msg_send![self.pasteboard, writeObjects: string_array] };
-        return if success {
+        if success {
             Ok(())
         } else {
             Err(anyhow!("NSPasteboard#writeObjects: returned false"))
-        };
+        }
     }
 }
 

@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use anyhow::Result;
 use crate::common::ClipboardProvider;
+use anyhow::Result;
 
 pub struct NopClipboardContext;
 

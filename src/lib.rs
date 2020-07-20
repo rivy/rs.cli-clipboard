@@ -119,7 +119,7 @@ pub type ClipboardContext = nop_clipboard::NopClipboardContext;
 /// cli_clipboard::set_contents("testing".to_owned()).unwrap();
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
-#[cfg(any(
+#[cfg(all(
     unix,
     not(any(
         windows,
