@@ -14,17 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use std::error::Error;
+use anyhow::Result;
 
 /// Trait for clipboard access
 pub trait ClipboardProvider: Sized {
     /// Create a context with which to access the clipboard
     // TODO: consider replacing Box<dyn Error> with an associated type?
-    fn new() -> Result<Self, Box<dyn Error>>;
+    fn new() -> Result<Self>;
     /// Method to get the clipboard contents as a String
-    fn get_contents(&mut self) -> Result<String, Box<dyn Error>>;
+    fn get_contents(&mut self) -> Result<String>;
     /// Method to set the clipboard contents as a String
-    fn set_contents(&mut self, content: String) -> Result<(), Box<dyn Error>>;
+    fn set_contents(&mut self, content: String) -> Result<()>;
     // TODO: come up with some platform-agnostic API for richer types
     // than just strings (c.f. issue #31)
 }

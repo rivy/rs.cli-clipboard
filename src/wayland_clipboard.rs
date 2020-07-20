@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 use crate::common::*;
+use anyhow::Result;
 use failure::Fail;
 use smithay_clipboard::WaylandClipboard;
 use std::{
@@ -40,9 +41,9 @@ use wl_clipboard_rs::{
 ///
 /// # Example
 ///
-/// ```
+/// ```noop
 /// use cli_clipboard::ClipboardProvider;
-/// let mut clipboard = cli_clipboard::WaylandClipboardContext::new().unwrap();
+/// let mut clipboard = cli_clipboard::wayland_clipboard::WaylandClipboardContext::new().unwrap();
 /// clipboard.set_contents("foo bar baz".to_string()).unwrap();
 /// let contents = clipboard.get_contents().unwrap();
 ///
@@ -82,7 +83,7 @@ impl ClipboardProvider for WaylandClipboardContext {
     /// In addition to returning Err on communication errors (such as
     /// when operating in an X11 environment), will also return Err if
     /// the compositor does not support the data-control protocol.
-    fn new() -> Result<WaylandClipboardContext, Box<dyn Error>> {
+    fn new() -> Result<WaylandClipboardContext> {
         let supports_primary_selection = match utils::is_primary_selection_supported() {
             Ok(v) => v,
             Err(e) => match e {
@@ -109,7 +110,7 @@ impl ClipboardProvider for WaylandClipboardContext {
     /// An empty clipboard is not considered an error, but the
     /// clipboard must indicate a text MIME type and the contained text
     /// must be valid UTF-8.
-    fn get_contents(&mut self) -> Result<String, Box<dyn Error>> {
+    fn get_contents(&mut self) -> Result<String> {
         self.inner.paste()
     }
 
@@ -119,7 +120,7 @@ impl ClipboardProvider for WaylandClipboardContext {
     /// this context was constructed, this will copy to both the
     /// primary selection and the regular clipboard. Otherwise, only
     /// the regular clipboard will be pasted to.
-    fn set_contents(&mut self, data: String) -> Result<(), Box<dyn Error>> {
+    fn set_contents(&mut self, data: String) -> Result<()> {
         self.inner.copy(data)
     }
 }
@@ -135,7 +136,7 @@ enum Inner {
 }
 
 impl Inner {
-    fn copy(&mut self, data: String) -> Result<(), Box<dyn Error>> {
+    fn copy(&mut self, data: String) -> Result<()> {
         match self {
             Inner::WithSeat {
                 clipboard,
@@ -151,7 +152,7 @@ impl Inner {
         }
     }
 
-    fn paste(&mut self) -> Result<String, Box<dyn Error>> {
+    fn paste(&mut self) -> Result<String> {
         match self {
             Inner::WithSeat {
                 clipboard,
@@ -163,7 +164,7 @@ impl Inner {
         }
     }
 
-    fn do_cli_copy(supports_primary_selection: bool, data: String) -> Result<(), Box<dyn Error>> {
+    fn do_cli_copy(supports_primary_selection: bool, data: String) -> Result<()> {
         let mut options = Options::new();
 
         options
@@ -186,7 +187,7 @@ impl Inner {
             .map_err(into_boxed_error)
     }
 
-    fn do_cli_paste(supports_primary_selection: bool) -> Result<String, Box<dyn Error>> {
+    fn do_cli_paste(supports_primary_selection: bool) -> Result<String> {
         if supports_primary_selection {
             match paste::get_contents(
                 paste::ClipboardType::Primary,
@@ -225,8 +226,8 @@ impl Inner {
     }
 }
 
-fn into_boxed_error<F: 'static + Fail>(fail: F) -> Box<dyn Error> {
-    Box::new(fail.compat())
+fn into_boxed_error<F: 'static + Fail>(fail: F) -> anyhow::Error {
+    fail.compat().into()
 }
 
 fn read_into_string<R: Read>(reader: &mut R) -> io::Result<String> {
