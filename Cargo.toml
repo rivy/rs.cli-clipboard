@@ -8,6 +8,9 @@ license = "MIT / Apache-2.0"
 keywords = ["clipboard"]
 edition = "2018"
 
+[dependencies]
+anyhow = "1.0.31"
+
 [target.'cfg(windows)'.dependencies]
 clipboard-win = "2.1"
 

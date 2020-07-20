@@ -36,12 +36,6 @@ limitations under the License.
     unix,
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
-extern crate failure;
-
-#[cfg(all(
-    unix,
-    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
-))]
 extern crate smithay_clipboard;
 
 #[cfg(all(
@@ -73,7 +67,7 @@ extern crate objc_foundation;
 #[cfg(target_os = "macos")]
 extern crate objc_id;
 
-use std::error::Error;
+use anyhow::Result;
 
 mod common;
 pub use common::ClipboardProvider;
@@ -94,7 +88,7 @@ pub mod x11_clipboard;
 pub mod windows_clipboard;
 
 #[cfg(target_os = "macos")]
-pub mod osx_clipboard;
+pub mod macos_clipboard;
 
 pub mod nop_clipboard;
 
@@ -106,7 +100,7 @@ pub type ClipboardContext = x11_clipboard::X11ClipboardContext;
 #[cfg(windows)]
 pub type ClipboardContext = windows_clipboard::WindowsClipboardContext;
 #[cfg(target_os = "macos")]
-pub type ClipboardContext = osx_clipboard::OSXClipboardContext;
+pub type ClipboardContext = macos_clipboard::MacOSClipboardContext;
 #[cfg(target_os = "android")]
 pub type ClipboardContext = nop_clipboard::NopClipboardContext; // TODO: implement AndroidClipboardContext (see #52)
 #[cfg(not(any(
@@ -134,8 +128,8 @@ pub type ClipboardContext = nop_clipboard::NopClipboardContext;
         target_os = "emscripten"
     ))
 ))]
-pub fn get_contents() -> Result<String, Box<dyn Error>> {
-    match WaylandClipboardContext::new() {
+pub fn get_contents() -> Result<String> {
+    match wayland_clipboard::WaylandClipboardContext::new() {
         Ok(mut context) => context.get_contents(),
         Err(_) => {
             let mut context = ClipboardContext::new()?;
@@ -152,7 +146,7 @@ pub fn get_contents() -> Result<String, Box<dyn Error>> {
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
 #[cfg(any(target_os = "macos", windows))]
-pub fn get_contents() -> Result<String, Box<dyn Error>> {
+pub fn get_contents() -> Result<String> {
     let mut context = ClipboardContext::new()?;
     context.get_contents()
 }
@@ -174,8 +168,8 @@ pub fn get_contents() -> Result<String, Box<dyn Error>> {
     unix,
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
-pub fn set_contents(data: String) -> Result<(), Box<dyn Error>> {
-    match WaylandClipboardContext::new() {
+pub fn set_contents(data: String) -> Result<()> {
+    match wayland_clipboard::WaylandClipboardContext::new() {
         Ok(mut context) => context.set_contents(data),
         Err(_) => {
             let mut context = ClipboardContext::new()?;
@@ -198,7 +192,7 @@ pub fn set_contents(data: String) -> Result<(), Box<dyn Error>> {
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
 #[cfg(any(target_os = "macos", windows))]
-pub fn set_contents(data: String) -> Result<(), Box<dyn Error>> {
+pub fn set_contents(data: String) -> Result<()> {
     let mut context = ClipboardContext::new()?;
     context.set_contents(data)
 }
