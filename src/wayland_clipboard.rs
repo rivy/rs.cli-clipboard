@@ -17,12 +17,7 @@ limitations under the License.
 use crate::common::*;
 use anyhow::Result;
 use failure::Fail;
-use smithay_clipboard::WaylandClipboard;
-use std::{
-    error::Error,
-    io::{self, Read},
-};
-use wayland_client::Display;
+use std::io::{self, Read};
 use wl_clipboard_rs::{
     copy::{self, Options, ServeRequests},
     paste, utils,
@@ -50,26 +45,7 @@ use wl_clipboard_rs::{
 /// assert_eq!(contents, "foo bar baz");
 /// ```
 pub struct WaylandClipboardContext {
-    inner: Inner,
-}
-
-impl WaylandClipboardContext {
-    /// Constructs a `WaylandClipboardContext` that operates on the
-    /// given seat using the regular Wayland clipboard protocol. This is
-    /// appropriate for GUI applications that create windows bound to a
-    /// Wayland display.
-    ///
-    /// Returns Err if unable to connect to a Wayland server.
-    pub fn with_seat(seat_name: String) -> Result<WaylandClipboardContext, Box<dyn Error>> {
-        let display = Display::connect_to_env()?.0;
-        let clipboard = WaylandClipboard::new_threaded(&display);
-        let inner = Inner::WithSeat {
-            clipboard,
-            seat_name,
-        };
-
-        Ok(WaylandClipboardContext { inner })
-    }
+    supports_primary_selection: bool,
 }
 
 impl ClipboardProvider for WaylandClipboardContext {
@@ -93,9 +69,7 @@ impl ClipboardProvider for WaylandClipboardContext {
         };
 
         Ok(WaylandClipboardContext {
-            inner: Inner::Cli {
-                supports_primary_selection,
-            },
+            supports_primary_selection,
         })
     }
 
@@ -111,84 +85,7 @@ impl ClipboardProvider for WaylandClipboardContext {
     /// clipboard must indicate a text MIME type and the contained text
     /// must be valid UTF-8.
     fn get_contents(&mut self) -> Result<String> {
-        self.inner.paste()
-    }
-
-    /// Copies to the Wayland clipboard.
-    ///
-    /// If the Wayland environment supported the primary selection when
-    /// this context was constructed, this will copy to both the
-    /// primary selection and the regular clipboard. Otherwise, only
-    /// the regular clipboard will be pasted to.
-    fn set_contents(&mut self, data: String) -> Result<()> {
-        self.inner.copy(data)
-    }
-}
-
-enum Inner {
-    WithSeat {
-        clipboard: WaylandClipboard,
-        seat_name: String,
-    },
-    Cli {
-        supports_primary_selection: bool,
-    },
-}
-
-impl Inner {
-    fn copy(&mut self, data: String) -> Result<()> {
-        match self {
-            Inner::WithSeat {
-                clipboard,
-                seat_name,
-            } => {
-                clipboard.store(seat_name.clone(), data);
-
-                Ok(())
-            }
-            Inner::Cli {
-                supports_primary_selection,
-            } => Inner::do_cli_copy(*supports_primary_selection, data),
-        }
-    }
-
-    fn paste(&mut self) -> Result<String> {
-        match self {
-            Inner::WithSeat {
-                clipboard,
-                seat_name,
-            } => Ok(clipboard.load(seat_name.clone())),
-            Inner::Cli {
-                supports_primary_selection,
-            } => Inner::do_cli_paste(*supports_primary_selection),
-        }
-    }
-
-    fn do_cli_copy(supports_primary_selection: bool, data: String) -> Result<()> {
-        let mut options = Options::new();
-
-        options
-            .seat(copy::Seat::All)
-            .trim_newline(false)
-            .foreground(false)
-            .serve_requests(ServeRequests::Unlimited);
-
-        if supports_primary_selection {
-            options.clipboard(copy::ClipboardType::Both);
-        } else {
-            options.clipboard(copy::ClipboardType::Regular);
-        }
-
-        options
-            .copy(
-                copy::Source::Bytes(data.into_bytes().into()),
-                copy::MimeType::Text,
-            )
-            .map_err(into_boxed_error)
-    }
-
-    fn do_cli_paste(supports_primary_selection: bool) -> Result<String> {
-        if supports_primary_selection {
+        if self.supports_primary_selection {
             match paste::get_contents(
                 paste::ClipboardType::Primary,
                 paste::Seat::Unspecified,
@@ -223,6 +120,35 @@ impl Inner {
         };
 
         Ok(read_into_string(&mut reader).map_err(Box::new)?)
+    }
+
+    /// Copies to the Wayland clipboard.
+    ///
+    /// If the Wayland environment supported the primary selection when
+    /// this context was constructed, this will copy to both the
+    /// primary selection and the regular clipboard. Otherwise, only
+    /// the regular clipboard will be pasted to.
+    fn set_contents(&mut self, data: String) -> Result<()> {
+        let mut options = Options::new();
+
+        options
+            .seat(copy::Seat::All)
+            .trim_newline(false)
+            .foreground(false)
+            .serve_requests(ServeRequests::Unlimited);
+
+        if self.supports_primary_selection {
+            options.clipboard(copy::ClipboardType::Both);
+        } else {
+            options.clipboard(copy::ClipboardType::Regular);
+        }
+
+        options
+            .copy(
+                copy::Source::Bytes(data.into_bytes().into()),
+                copy::MimeType::Text,
+            )
+            .map_err(into_boxed_error)
     }
 }
 
