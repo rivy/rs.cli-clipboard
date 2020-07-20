@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use common::*;
+use crate::common::*;
 use failure::Fail;
 use smithay_clipboard::WaylandClipboard;
 use std::{
@@ -241,6 +241,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn wayland_test() {
         let mut clipboard =
             WaylandClipboardContext::new().expect("couldn't create a Wayland clipboard");

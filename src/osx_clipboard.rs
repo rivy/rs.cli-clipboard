@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use common::*;
+use crate::common::*;
 use objc::runtime::{Class, Object};
 use objc_foundation::{INSArray, INSObject, INSString};
 use objc_foundation::{NSArray, NSDictionary, NSObject, NSString};
@@ -32,15 +32,8 @@ extern "C" {}
 
 impl ClipboardProvider for OSXClipboardContext {
     fn new() -> Result<OSXClipboardContext, Box<Error>> {
-        let cls = try!(Class::get("NSPasteboard").ok_or(err("Class::get(\"NSPasteboard\")")));
-        let pasteboard: *mut Object = unsafe { msg_send![cls, generalPasteboard] };
-        if pasteboard.is_null() {
-            return Err(err("NSPasteboard#generalPasteboard returned null"));
         }
-        let pasteboard: Id<Object> = unsafe { Id::from_ptr(pasteboard) };
-        Ok(OSXClipboardContext {
-            pasteboard: pasteboard,
-        })
+        }
     }
     fn get_contents(&mut self) -> Result<String, Box<Error>> {
         let string_class: Id<NSObject> = {
