@@ -48,7 +48,7 @@ pub struct WaylandClipboardContext {
     supports_primary_selection: bool,
 }
 
-impl ClipboardProvider for WaylandClipboardContext {
+impl WaylandClipboardContext {
     /// Constructs a new `WaylandClipboardContext` that operates on all
     /// seats using the data-control clipboard protocol.  This is
     /// intended for CLI applications that do not create Wayland
@@ -59,7 +59,7 @@ impl ClipboardProvider for WaylandClipboardContext {
     /// In addition to returning Err on communication errors (such as
     /// when operating in an X11 environment), will also return Err if
     /// the compositor does not support the data-control protocol.
-    fn new() -> Result<WaylandClipboardContext> {
+    pub fn new() -> Result<WaylandClipboardContext> {
         let supports_primary_selection = match utils::is_primary_selection_supported() {
             Ok(v) => v,
             Err(e) => match e {
@@ -72,7 +72,9 @@ impl ClipboardProvider for WaylandClipboardContext {
             supports_primary_selection,
         })
     }
+}
 
+impl ClipboardProvider for WaylandClipboardContext {
     /// Pastes from the Wayland clipboard.
     ///
     /// If the Wayland environment supported the primary selection when

@@ -30,8 +30,8 @@ pub struct MacOSClipboardContext {
 #[link(name = "AppKit", kind = "framework")]
 extern "C" {}
 
-impl ClipboardProvider for MacOSClipboardContext {
-    fn new() -> Result<MacOSClipboardContext> {
+impl MacOSClipboardContext {
+    pub fn new() -> Result<MacOSClipboardContext> {
         let cls =
             Class::get("NSPasteboard").ok_or_else(|| anyhow!("Class::get(\"NSPasteboard\")"))?;
         let pasteboard: *mut Object = unsafe { msg_send![cls, generalPasteboard] };
@@ -41,7 +41,9 @@ impl ClipboardProvider for MacOSClipboardContext {
         let pasteboard: Id<Object> = unsafe { Id::from_ptr(pasteboard) };
         Ok(MacOSClipboardContext { pasteboard })
     }
+}
 
+impl ClipboardProvider for MacOSClipboardContext {
     fn get_contents(&mut self) -> Result<String> {
         let string_class: Id<NSObject> = {
             let cls: Id<Class> = unsafe { Id::from_ptr(class("NSString")) };
@@ -77,6 +79,13 @@ impl ClipboardProvider for MacOSClipboardContext {
         } else {
             Err(anyhow!("NSPasteboard#writeObjects: returned false"))
         }
+    }
+}
+
+impl ClearClipboardProvider for MacOSClipboardContext {
+    fn clear(&mut self) -> Result<()> {
+        unsafe { msg_send![self.pasteboard, clearContents] };
+        Ok(())
     }
 }
 

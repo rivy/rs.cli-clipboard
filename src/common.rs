@@ -17,14 +17,16 @@ limitations under the License.
 use anyhow::Result;
 
 /// Trait for clipboard access
-pub trait ClipboardProvider: Sized {
-    /// Create a context with which to access the clipboard
-    // TODO: consider replacing Box<dyn Error> with an associated type?
-    fn new() -> Result<Self>;
+pub trait ClipboardProvider {
     /// Method to get the clipboard contents as a String
     fn get_contents(&mut self) -> Result<String>;
     /// Method to set the clipboard contents as a String
     fn set_contents(&mut self, content: String) -> Result<()>;
     // TODO: come up with some platform-agnostic API for richer types
     // than just strings (c.f. issue #31)
+}
+
+pub trait ClearClipboardProvider: ClipboardProvider {
+    /// Method to clear the clipboard contents
+    fn clear(&mut self) -> Result<()>;
 }

@@ -46,14 +46,19 @@ pub struct X11ClipboardContext<S = Clipboard>(X11Clipboard, PhantomData<S>)
 where
     S: Selection;
 
+impl<S> X11ClipboardContext<S>
+where
+    S: Selection,
+{
+    pub fn new() -> Result<X11ClipboardContext<S>> {
+        Ok(X11ClipboardContext(X11Clipboard::new()?, PhantomData))
+    }
+}
+
 impl<S> ClipboardProvider for X11ClipboardContext<S>
 where
     S: Selection,
 {
-    fn new() -> Result<X11ClipboardContext<S>> {
-        Ok(X11ClipboardContext(X11Clipboard::new()?, PhantomData))
-    }
-
     fn get_contents(&mut self) -> Result<String> {
         Ok(String::from_utf8(self.0.load(
             S::atom(&self.0.getter.atoms),

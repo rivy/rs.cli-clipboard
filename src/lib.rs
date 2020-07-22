@@ -30,35 +30,15 @@ limitations under the License.
 //! it has not yet been manually tested on every platform.
 //!
 
-#![crate_name = "cli_clipboard"]
-#![crate_type = "lib"]
-#![crate_type = "dylib"]
-#![crate_type = "rlib"]
-
-#[cfg(all(
-    unix,
-    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
-))]
-extern crate wl_clipboard_rs;
-
 #[cfg(all(
     unix,
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
 extern crate x11_clipboard as x11_clipboard_crate;
 
-#[cfg(windows)]
-extern crate clipboard_win;
-
-#[cfg(target_os = "macos")]
-#[macro_use]
-extern crate objc;
-#[cfg(target_os = "macos")]
-extern crate objc_foundation;
-#[cfg(target_os = "macos")]
-extern crate objc_id;
-
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use fork::{fork, Fork};
+use std::time::Duration;
 
 mod common;
 pub use common::ClipboardProvider;
@@ -81,52 +61,28 @@ pub mod windows_clipboard;
 #[cfg(target_os = "macos")]
 pub mod macos_clipboard;
 
-pub mod nop_clipboard;
-
 #[cfg(all(
     unix,
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
-pub type ClipboardContext = x11_clipboard::X11ClipboardContext;
+pub fn get_clipboard() -> Result<Box<dyn ClipboardProvider>> {
+    match wayland_clipboard::WaylandClipboardContext::new() {
+        Ok(context) => Ok(Box::new(context)),
+        Err(_) => match x11_clipboard::X11ClipboardContext::<x11_clipboard::Clipboard>::new() {
+            Ok(context) => Ok(Box::new(context)),
+            Err(err) => Err(err),
+        },
+    }
+}
+
 #[cfg(windows)]
-pub type ClipboardContext = windows_clipboard::WindowsClipboardContext;
-#[cfg(target_os = "macos")]
-pub type ClipboardContext = macos_clipboard::MacOSClipboardContext;
-#[cfg(target_os = "android")]
-pub type ClipboardContext = nop_clipboard::NopClipboardContext; // TODO: implement AndroidClipboardContext (see #52)
-#[cfg(not(any(
-    unix,
-    windows,
-    target_os = "macos",
-    target_os = "android",
-    target_os = "emscripten"
-)))]
-pub type ClipboardContext = nop_clipboard::NopClipboardContext;
+pub fn get_clipboard() -> Result<Box<dyn ClipboardProvider>> {
+    windows_clipboard::WindowsClipboardContext::new()
+}
 
-/// Get the current clipboard contents
-///
-/// # Example
-/// ```
-/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
-/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
-/// ```
-#[cfg(all(
-    unix,
-    not(any(
-        windows,
-        target_os = "macos",
-        target_os = "android",
-        target_os = "emscripten"
-    ))
-))]
-pub fn get_contents() -> Result<String> {
-    match wayland_clipboard::WaylandClipboardContext::new() {
-        Ok(mut context) => context.get_contents(),
-        Err(_) => {
-            let mut context = ClipboardContext::new()?;
-            context.get_contents()
-        }
-    }
+#[cfg(target_os = "macos")]
+pub fn get_clipboard() -> Result<Box<dyn ClipboardProvider>> {
+    macos_clipboard::MacOSClipboardContext::new()
 }
 
 /// Get the current clipboard contents
@@ -136,19 +92,35 @@ pub fn get_contents() -> Result<String> {
 /// cli_clipboard::set_contents("testing".to_owned()).unwrap();
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
-#[cfg(any(target_os = "macos", windows))]
 pub fn get_contents() -> Result<String> {
-    let mut context = ClipboardContext::new()?;
-    context.get_contents()
+    get_clipboard()?.get_contents()
 }
 
 /// Write a string to the clipboard
 ///
+/// This uses the platform default behavior for setting clipboard contents.
 /// Other users of the Wayland or X11 clipboard will only see the contents
 /// copied to the clipboard so long as the process copying to the
 /// clipboard exists. If you need the contents of the clipboard to
-/// remain after your application shuts down, consider daemonizing the
-/// clipboard components of your application.
+/// remain after your application shuts down, consider using the
+/// [set_contents_for_duration](fn.set_contents_for_duration.html) function.
+/// MacOS and Windows clipboard contents will stick around after your
+/// application exits.
+///
+/// # Example
+/// ```
+/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
+/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
+/// ```
+pub fn set_contents(data: String) -> Result<()> {
+    get_clipboard()?.set_contents(data)?;
+    Ok(())
+}
+
+/// Write a string to the clipboard for a given duration
+///
+/// Duration is an Option.  If None is passed in, the clipboard contents
+/// will stay set until something else is copied to the clipboard.
 ///
 /// # Example
 /// ```
@@ -159,38 +131,85 @@ pub fn get_contents() -> Result<String> {
     unix,
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
-pub fn set_contents(data: String) -> Result<()> {
-    match wayland_clipboard::WaylandClipboardContext::new() {
-        Ok(mut context) => context.set_contents(data),
-        Err(_) => {
-            let mut context = ClipboardContext::new()?;
-            context.set_contents(data)
+pub fn set_contents_for_duration(data: String, time: Option<Duration>) -> Result<()> {
+    match fork() {
+        Ok(Fork::Parent(_)) => Ok(()),
+        Ok(Fork::Child) => {
+            let mut context = get_clipboard().unwrap();
+            context.set_contents(data.clone()).unwrap();
+            match time {
+                Some(time) => {
+                    std::thread::sleep(time);
+                    std::process::exit(0);
+                }
+                None => loop {
+                    std::thread::sleep(Duration::from_secs(60));
+                    if context.get_contents().unwrap() != data {
+                        std::process::exit(0);
+                    }
+                },
+            }
         }
+        Err(_e) => Err(anyhow!("Error copying to clipboard")),
     }
 }
 
-/// Write a string to the clipboard
+/// Write a string to the clipboard for a given duration
 ///
-/// Other users of the Wayland or X11 clipboard will only see the contents
-/// copied to the clipboard so long as the process copying to the
-/// clipboard exists. If you need the contents of the clipboard to
-/// remain after your application shuts down, consider daemonizing the
-/// clipboard components of your application.
+/// Duration is an Option.  If None is passed in, the clipboard contents
+/// will stay set until something else is copied to the clipboard.
 ///
 /// # Example
 /// ```
 /// cli_clipboard::set_contents("testing".to_owned()).unwrap();
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
-#[cfg(any(target_os = "macos", windows))]
-pub fn set_contents(data: String) -> Result<()> {
-    let mut context = ClipboardContext::new()?;
-    context.set_contents(data)
+#[cfg(target_os = "macos")]
+pub fn set_contents_for_duration(data: String, time: Option<Duration>) -> Result<()> {
+    match fork() {
+        Ok(Fork::Parent(_)) => Ok(()),
+        Ok(Fork::Child) => {
+            let mut context = get_clipboard().unwrap();
+            context.set_contents(data.clone()).unwrap();
+            match time {
+                Some(time) => {
+                    std::thread::sleep(time);
+                    context.clear().unwrap();
+                    std::process::exit(0);
+                }
+                None => std::process::exit(0),
+            }
+        }
+        Err(_e) => Err(anyhow!("Error copying to clipboard")),
+    }
+}
+
+/// Write a string to the clipboard for a given duration
+///
+/// Duration is an Option.  If None is passed in, the clipboard contents
+/// will stay set until something else is copied to the clipboard.
+///
+/// # Example
+/// ```
+/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
+/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
+/// ```
+#[cfg(windows)]
+pub fn set_contents_for_duration(data: String, time: Option<Duration>) -> Result<()> {
+    let mut context = get_clipboard()?;
+    context.set_contents(data.clone())?;
+    match time {
+        Some(time) => {
+            Command::new("cmd")
+                .creation_flags(0x00000008)
+                .args(&["sleep", time])
+        }
+    }
 }
 
 #[test]
 fn test_clipboard() {
-    let mut ctx = ClipboardContext::new().unwrap();
+    let mut ctx = get_clipboard().unwrap();
     ctx.set_contents("some string".to_owned()).unwrap();
     assert!(ctx.get_contents().unwrap() == "some string");
 }

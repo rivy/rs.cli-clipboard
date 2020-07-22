@@ -7,7 +7,7 @@ use cli_clipboard::ClipboardProvider;
 
 #[cfg(target_os = "linux")]
 fn main() {
-    let mut ctx: X11ClipboardContext<Primary> = ClipboardProvider::new().unwrap();
+    let mut ctx: X11ClipboardContext<Primary> = X11ClipboardContext::new().unwrap();
 
     let the_string = "Hello, world!";
 

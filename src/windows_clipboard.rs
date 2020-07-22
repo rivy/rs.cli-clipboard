@@ -14,21 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use clipboard_win::{get_clipboard_string, set_clipboard_string};
+use clipboard_win::{empty, get_clipboard_string, set_clipboard_string, Clipboard};
 
-use crate::common::ClipboardProvider;
+use crate::common::{ClearClipboardProvider, ClipboardProvider};
 use anyhow::Result;
 
 pub struct WindowsClipboardContext;
 
-impl ClipboardProvider for WindowsClipboardContext {
-    fn new() -> Result<Self> {
+impl WindowsClipboardContext {
+    pub fn new() -> Result<Self> {
         Ok(WindowsClipboardContext)
     }
+}
+
+impl ClipboardProvider for WindowsClipboardContext {
     fn get_contents(&mut self) -> Result<String> {
         Ok(get_clipboard_string()?)
     }
+
     fn set_contents(&mut self, data: String) -> Result<()> {
         Ok(set_clipboard_string(&data)?)
+    }
+}
+
+impl ClearClipboardProvider for WindowsClipboardContext {
+    fn clear(&mut self) -> Result<()> {
+        let _clip = Clipboard::new_attempts(10)?;
+        Ok(empty()?)
     }
 }
