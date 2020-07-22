@@ -70,4 +70,12 @@ where
             data,
         )?)
     }
+
+    fn clear(&mut self) -> Result<()> {
+        Ok(self.0.store(
+            S::atom(&self.0.setter.atoms),
+            self.0.setter.atoms.utf8_string,
+            "".to_string(),
+        )?)
+    }
 }

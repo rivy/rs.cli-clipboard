@@ -19,7 +19,7 @@ use anyhow::Result;
 use failure::Fail;
 use std::io::{self, Read};
 use wl_clipboard_rs::{
-    copy::{self, Options, ServeRequests},
+    copy::{self, clear, Options, ServeRequests},
     paste, utils,
 };
 
@@ -149,6 +149,14 @@ impl ClipboardProvider for WaylandClipboardContext {
                 copy::MimeType::Text,
             )
             .map_err(into_boxed_error)
+    }
+
+    fn clear(&mut self) -> Result<()> {
+        if self.supports_primary_selection {
+            clear(copy::ClipboardType::Both, copy::Seat::All).map_err(into_boxed_error)
+        } else {
+            clear(copy::ClipboardType::Regular, copy::Seat::All).map_err(into_boxed_error)
+        }
     }
 }
 
