@@ -36,6 +36,10 @@ limitations under the License.
 ))]
 extern crate x11_clipboard as x11_clipboard_crate;
 
+#[cfg(target_os = "macos")]
+#[macro_use]
+extern crate objc;
+
 use anyhow::{anyhow, Result};
 use fork::{fork, Fork};
 use std::time::Duration;
@@ -82,7 +86,10 @@ pub fn get_clipboard() -> Result<Box<dyn ClipboardProvider>> {
 
 #[cfg(target_os = "macos")]
 pub fn get_clipboard() -> Result<Box<dyn ClipboardProvider>> {
-    macos_clipboard::MacOSClipboardContext::new()
+    match macos_clipboard::MacOSClipboardContext::new() {
+        Ok(context) => Ok(Box::new(context)),
+        Err(err) => Err(err),
+    }
 }
 
 /// Get the current clipboard contents
@@ -161,20 +168,31 @@ pub fn set_contents_for_duration(data: String, time: Option<Duration>) -> Result
 ///
 /// # Example
 /// ```
-/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
+/// let time = std::time::Duration::from_millis(100);
+/// cli_clipboard::set_contents_for_duration("testing".to_owned(), Some(time)).unwrap();
+/// // wait a little because the contents are set in a forked process
+/// std::thread::sleep(std::time::Duration::from_millis(10));
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
+/// std::thread::sleep(time);
+/// match cli_clipboard::get_contents() {
+///     Ok(_) => panic!("The clipboard should be empty"),
+///     Err(err) => assert_eq!(err.to_string(), "pasteboard#readObjectsForClasses:options: returned empty"),
+/// }
+///
 /// ```
 #[cfg(target_os = "macos")]
 pub fn set_contents_for_duration(data: String, time: Option<Duration>) -> Result<()> {
     match fork() {
         Ok(Fork::Parent(_)) => Ok(()),
         Ok(Fork::Child) => {
-            let mut context = get_clipboard().unwrap();
+            let mut context = macos_clipboard::MacOSClipboardContext::new().unwrap();
             context.set_contents(data.clone()).unwrap();
+            println!("set_contents");
             match time {
                 Some(time) => {
                     std::thread::sleep(time);
                     context.clear().unwrap();
+                    println!("cleared");
                     std::process::exit(0);
                 }
                 None => std::process::exit(0),
@@ -199,17 +217,35 @@ pub fn set_contents_for_duration(data: String, time: Option<Duration>) -> Result
     let mut context = get_clipboard()?;
     context.set_contents(data.clone())?;
     match time {
-        Some(time) => {
-            Command::new("cmd")
-                .creation_flags(0x00000008)
-                .args(&["sleep", time])
+        Some(time) => Command::new("cmd")
+            .creation_flags(0x00000008)
+            .args(&["sleep", time]),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clipboard() {
+        let mut ctx = get_clipboard().unwrap();
+        ctx.set_contents("some string".to_owned()).unwrap();
+        assert_eq!(ctx.get_contents().unwrap(), "some string");
+    }
+
+    #[test]
+    fn test_set_clipboard_for_duration() {
+        let time = std::time::Duration::from_millis(100);
+        set_contents_for_duration("testing".to_owned(), Some(time)).unwrap();
+        // wait a little because the contents are set in a forked process
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        assert_eq!(get_contents().unwrap(), "testing");
+        std::thread::sleep(time);
+        match get_contents() {
+            Ok(_) => panic!("The clipboard should be empty"),
+            Err(err) => assert_eq!(err.to_string(), "pasteboard#readObjectsForClasses:options: returned empty"),
         }
     }
 }
 
-#[test]
-fn test_clipboard() {
-    let mut ctx = get_clipboard().unwrap();
-    ctx.set_contents("some string".to_owned()).unwrap();
-    assert!(ctx.get_contents().unwrap() == "some string");
-}

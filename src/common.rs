@@ -25,8 +25,3 @@ pub trait ClipboardProvider {
     // TODO: come up with some platform-agnostic API for richer types
     // than just strings (c.f. issue #31)
 }
-
-pub trait ClearClipboardProvider: ClipboardProvider {
-    /// Method to clear the clipboard contents
-    fn clear(&mut self) -> Result<()>;
-}

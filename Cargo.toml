@@ -24,5 +24,5 @@ failure = "0.1"
 wl-clipboard-rs = "0.4"
 x11-clipboard = "0.5.1"
 
-[target.'cfg(all(unix, not(any(target_os="macos"))))'.dependencies]
+[target.'cfg(all(unix, not(any(target_os="android", target_os="emscripten"))))'.dependencies]
 fork = "0.1.15"

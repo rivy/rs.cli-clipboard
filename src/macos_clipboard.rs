@@ -41,6 +41,11 @@ impl MacOSClipboardContext {
         let pasteboard: Id<Object> = unsafe { Id::from_ptr(pasteboard) };
         Ok(MacOSClipboardContext { pasteboard })
     }
+
+    pub fn clear(&mut self) -> Result<()> {
+        let _: usize = unsafe { msg_send![self.pasteboard, clearContents] };
+        Ok(())
+    }
 }
 
 impl ClipboardProvider for MacOSClipboardContext {
@@ -79,13 +84,6 @@ impl ClipboardProvider for MacOSClipboardContext {
         } else {
             Err(anyhow!("NSPasteboard#writeObjects: returned false"))
         }
-    }
-}
-
-impl ClearClipboardProvider for MacOSClipboardContext {
-    fn clear(&mut self) -> Result<()> {
-        unsafe { msg_send![self.pasteboard, clearContents] };
-        Ok(())
     }
 }
 
