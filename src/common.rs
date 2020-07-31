@@ -19,7 +19,6 @@ use anyhow::Result;
 /// Trait for clipboard access
 pub trait ClipboardProvider: Sized {
     /// Create a context with which to access the clipboard
-    // TODO: consider replacing Box<dyn Error> with an associated type?
     fn new() -> Result<Self>;
     /// Method to get the clipboard contents as a String
     fn get_contents(&mut self) -> Result<String>;
@@ -27,4 +26,6 @@ pub trait ClipboardProvider: Sized {
     fn set_contents(&mut self, content: String) -> Result<()>;
     // TODO: come up with some platform-agnostic API for richer types
     // than just strings (c.f. issue #31)
+    /// Method to clear the clipboard
+    fn clear(&mut self) -> Result<()>;
 }

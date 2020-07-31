@@ -78,6 +78,11 @@ impl ClipboardProvider for MacOSClipboardContext {
             Err(anyhow!("NSPasteboard#writeObjects: returned false"))
         }
     }
+
+    fn clear(&mut self) -> Result<()> {
+        let _: usize = unsafe { msg_send![self.pasteboard, clearContents] };
+        Ok(())
+    }
 }
 
 // this is a convenience function that both cocoa-rs and

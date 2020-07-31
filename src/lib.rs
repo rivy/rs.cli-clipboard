@@ -19,27 +19,48 @@ limitations under the License.
 //! cli-clipboard is a fork of
 //! [rust-clipboard](https://github.com/aweinstock314/rust-clipboard) that
 //! adds wayland support for terminal and window-less applications via
-//! [wl-clipboard-rs](https://github.com/YaLTeR/wl-clipboard-rs)
+//! [wl-clipboard-rs](https://github.com/YaLTeR/wl-clipboard-rs). For terminal
+//! applications it supports copy and paste for both wayland and X11 linux
+//! environments, macOS and windows.
 //!
 //! Also adds convenience functions for [get_contents](fn.get_contents.html) and
-//! [set_contents](fn.set_contents.html). These functions are particularly useful for
-//! linux cli applications since they will attempt to use the wayland clipboard and
-//! correctly fallback to X11.
+//! [set_contents](fn.set_contents.html).
 //!
-//! Consider this alpha software.  The tests pass on linux, macOS and windows but
-//! it has not yet been manually tested on every platform.
+//! On Linux it will first attempt to setup a Wayland clipboard provider.  If that
+//! fails it will then fallback to the X11 clipboard provider.
 //!
-
-#![crate_name = "cli_clipboard"]
-#![crate_type = "lib"]
-#![crate_type = "dylib"]
-#![crate_type = "rlib"]
-
-#[cfg(all(
-    unix,
-    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
-))]
-extern crate wl_clipboard_rs;
+//! ## Examples
+//!
+//! Using ClipboardContext to create a clipboard provider:
+//!
+//! ```
+//! #[cfg_attr(any(windows, target_os = "macos"), should_panic)]
+//! use cli_clipboard::{ClipboardContext, ClipboardProvider};
+//!
+//! let mut ctx = ClipboardContext::new().unwrap();
+//! let the_string = "Hello, world!";
+//! ctx.set_contents(the_string.to_owned()).unwrap();
+//! assert_eq!(ctx.get_contents().unwrap(), the_string);
+//! ctx.clear();
+//! // clearing the clipboard causes get_contents to return Err on macos and windows
+//! if cfg!(any(windows, target_os = "macos")) {
+//!    if ctx.get_contents().is_ok() {
+//!        panic!("Should be Err");
+//!    }
+//! } else {
+//!    assert_eq!(ctx.get_contents().unwrap(), "");
+//! }
+//! ```
+//!
+//! Using the helper functions:
+//!
+//! ```
+//! use cli_clipboard;
+//!
+//! let the_string = "Hello, world!";
+//! cli_clipboard::set_contents(the_string.to_owned()).unwrap();
+//! assert_eq!(cli_clipboard::get_contents().unwrap(), the_string);
+//! ```
 
 #[cfg(all(
     unix,
@@ -47,16 +68,9 @@ extern crate wl_clipboard_rs;
 ))]
 extern crate x11_clipboard as x11_clipboard_crate;
 
-#[cfg(windows)]
-extern crate clipboard_win;
-
 #[cfg(target_os = "macos")]
 #[macro_use]
 extern crate objc;
-#[cfg(target_os = "macos")]
-extern crate objc_foundation;
-#[cfg(target_os = "macos")]
-extern crate objc_id;
 
 use anyhow::Result;
 
@@ -75,33 +89,29 @@ pub mod wayland_clipboard;
 ))]
 pub mod x11_clipboard;
 
+#[cfg(all(
+    unix,
+    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
+))]
+pub mod linux_clipboard;
+
 #[cfg(windows)]
 pub mod windows_clipboard;
 
 #[cfg(target_os = "macos")]
 pub mod macos_clipboard;
 
-pub mod nop_clipboard;
-
 #[cfg(all(
     unix,
     not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
 ))]
-pub type ClipboardContext = x11_clipboard::X11ClipboardContext;
+pub type ClipboardContext = linux_clipboard::LinuxClipboardContext;
+
 #[cfg(windows)]
 pub type ClipboardContext = windows_clipboard::WindowsClipboardContext;
+
 #[cfg(target_os = "macos")]
 pub type ClipboardContext = macos_clipboard::MacOSClipboardContext;
-#[cfg(target_os = "android")]
-pub type ClipboardContext = nop_clipboard::NopClipboardContext; // TODO: implement AndroidClipboardContext (see #52)
-#[cfg(not(any(
-    unix,
-    windows,
-    target_os = "macos",
-    target_os = "android",
-    target_os = "emscripten"
-)))]
-pub type ClipboardContext = nop_clipboard::NopClipboardContext;
 
 /// Get the current clipboard contents
 ///
@@ -110,87 +120,41 @@ pub type ClipboardContext = nop_clipboard::NopClipboardContext;
 /// cli_clipboard::set_contents("testing".to_owned()).unwrap();
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
-#[cfg(all(
-    unix,
-    not(any(
-        windows,
-        target_os = "macos",
-        target_os = "android",
-        target_os = "emscripten"
-    ))
-))]
 pub fn get_contents() -> Result<String> {
-    match wayland_clipboard::WaylandClipboardContext::new() {
-        Ok(mut context) => context.get_contents(),
-        Err(_) => {
-            let mut context = ClipboardContext::new()?;
-            context.get_contents()
-        }
-    }
-}
-
-/// Get the current clipboard contents
-///
-/// # Example
-/// ```
-/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
-/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
-/// ```
-#[cfg(any(target_os = "macos", windows))]
-pub fn get_contents() -> Result<String> {
-    let mut context = ClipboardContext::new()?;
-    context.get_contents()
+    let mut ctx = ClipboardContext::new()?;
+    ctx.get_contents()
 }
 
 /// Write a string to the clipboard
 ///
+/// This uses the platform default behavior for setting clipboard contents.
 /// Other users of the Wayland or X11 clipboard will only see the contents
 /// copied to the clipboard so long as the process copying to the
 /// clipboard exists. If you need the contents of the clipboard to
-/// remain after your application shuts down, consider daemonizing the
-/// clipboard components of your application.
+/// remain after your application shuts down, consider using the
+/// [set_contents_for_duration](fn.set_contents_for_duration.html) function.
+/// MacOS and Windows clipboard contents will stick around after your
+/// application exits.
 ///
 /// # Example
 /// ```
 /// cli_clipboard::set_contents("testing".to_owned()).unwrap();
 /// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
 /// ```
-#[cfg(all(
-    unix,
-    not(any(target_os = "macos", target_os = "android", target_os = "emscripten"))
-))]
 pub fn set_contents(data: String) -> Result<()> {
-    match wayland_clipboard::WaylandClipboardContext::new() {
-        Ok(mut context) => context.set_contents(data),
-        Err(_) => {
-            let mut context = ClipboardContext::new()?;
-            context.set_contents(data)
-        }
+    let mut ctx = ClipboardContext::new()?;
+    ctx.set_contents(data)?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clipboard() {
+        let mut ctx = ClipboardContext::new().unwrap();
+        ctx.set_contents("some string".to_owned()).unwrap();
+        assert_eq!(ctx.get_contents().unwrap(), "some string");
     }
-}
-
-/// Write a string to the clipboard
-///
-/// Other users of the Wayland or X11 clipboard will only see the contents
-/// copied to the clipboard so long as the process copying to the
-/// clipboard exists. If you need the contents of the clipboard to
-/// remain after your application shuts down, consider daemonizing the
-/// clipboard components of your application.
-///
-/// # Example
-/// ```
-/// cli_clipboard::set_contents("testing".to_owned()).unwrap();
-/// assert_eq!(cli_clipboard::get_contents().unwrap(), "testing");
-/// ```
-#[cfg(any(target_os = "macos", windows))]
-pub fn set_contents(data: String) -> Result<()> {
-    let mut context = ClipboardContext::new()?;
-    context.set_contents(data)
-}
-
-#[test]
-fn test_clipboard() {
-    let mut ctx = ClipboardContext::new().unwrap();
-    ctx.set_contents("some string".to_owned()).unwrap();
-    assert!(ctx.get_contents().unwrap() == "some string");
 }
