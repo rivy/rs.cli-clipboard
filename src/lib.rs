@@ -34,7 +34,6 @@ limitations under the License.
 //! Using ClipboardContext to create a clipboard provider:
 //!
 //! ```
-//! #[cfg_attr(any(windows, target_os = "macos"), should_panic)]
 //! use cli_clipboard::{ClipboardContext, ClipboardProvider};
 //!
 //! let mut ctx = ClipboardContext::new().unwrap();

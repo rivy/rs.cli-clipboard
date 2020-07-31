@@ -11,8 +11,6 @@ On Linux it will first attempt to setup a Wayland clipboard provider.  If that f
 Using ClipboardContext to create a clipboard provider:
 
 ```rust
-#[cfg_attr(any(windows, target_os = "macos"), should_panic)]
-#[should_panic]
 use cli_clipboard::{ClipboardContext, ClipboardProvider};
 
 let mut ctx = ClipboardContext::new().unwrap();
