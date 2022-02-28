@@ -1,9 +1,9 @@
 [package]
 name = "cli-clipboard"
-version = "0.2.0"
-authors = ["Andrew Stephan <thekiteeatingtree@gmail.com>"]
+version = "0.2.1"
+authors = ["Allie Stephan <allie@pointguard.dev>"]
 description = "cli-clipboard is a cross-platform library for getting and setting the contents of the OS-level clipboard."
-repository = "https://github.com/thekiteeatingtree/cli-clipboard"
+repository = "https://github.com/actuallyallie/cli-clipboard"
 license = "MIT / Apache-2.0"
 keywords = ["clipboard"]
 edition = "2018"
