@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 use crate::common::*;
-use anyhow::Result;
+use crate::Result;
 use std::marker::PhantomData;
 use std::time::Duration;
 use x11_clipboard_crate::xcb::xproto::Atom;

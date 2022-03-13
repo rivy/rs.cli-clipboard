@@ -17,7 +17,7 @@ limitations under the License.
 use clipboard_win::{empty, get_clipboard_string, set_clipboard_string, Clipboard};
 
 use crate::common::ClipboardProvider;
-use anyhow::Result;
+use crate::Result;
 
 pub struct WindowsClipboardContext;
 

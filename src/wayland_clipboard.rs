@@ -15,8 +15,7 @@ limitations under the License.
 */
 
 use crate::common::*;
-use anyhow::Result;
-use failure::Fail;
+use crate::Result;
 use std::io::{self, Read};
 use wl_clipboard_rs::{
     copy::{self, clear, Options, ServeRequests},
@@ -62,10 +61,8 @@ impl ClipboardProvider for WaylandClipboardContext {
     fn new() -> Result<WaylandClipboardContext> {
         let supports_primary_selection = match utils::is_primary_selection_supported() {
             Ok(v) => v,
-            Err(e) => match e {
-                utils::PrimarySelectionCheckError::NoSeats => false,
-                _ => return Err(into_boxed_error(e)),
-            },
+            Err(utils::PrimarySelectionCheckError::NoSeats) => false,
+            Err(e) => return Err(e.into()),
         };
 
         Ok(WaylandClipboardContext {
@@ -111,12 +108,10 @@ impl ClipboardProvider for WaylandClipboardContext {
             paste::MimeType::Text,
         ) {
             Ok((reader, _)) => reader,
-            Err(e) => match e {
-                paste::Error::NoSeats | paste::Error::ClipboardEmpty | paste::Error::NoMimeType => {
-                    return Ok("".to_string());
-                }
-                _ => return Err(into_boxed_error(e)),
-            },
+            Err(
+                paste::Error::NoSeats | paste::Error::ClipboardEmpty | paste::Error::NoMimeType,
+            ) => return Ok("".to_string()),
+            Err(e) => return Err(e.into()),
         };
 
         Ok(read_into_string(&mut reader).map_err(Box::new)?)
@@ -148,20 +143,16 @@ impl ClipboardProvider for WaylandClipboardContext {
                 copy::Source::Bytes(data.into_bytes().into()),
                 copy::MimeType::Text,
             )
-            .map_err(into_boxed_error)
+            .map_err(Into::into)
     }
 
     fn clear(&mut self) -> Result<()> {
         if self.supports_primary_selection {
-            clear(copy::ClipboardType::Both, copy::Seat::All).map_err(into_boxed_error)
+            clear(copy::ClipboardType::Both, copy::Seat::All).map_err(Into::into)
         } else {
-            clear(copy::ClipboardType::Regular, copy::Seat::All).map_err(into_boxed_error)
+            clear(copy::ClipboardType::Regular, copy::Seat::All).map_err(Into::into)
         }
     }
-}
-
-fn into_boxed_error<F: 'static + Fail>(fail: F) -> anyhow::Error {
-    fail.compat().into()
 }
 
 fn read_into_string<R: Read>(reader: &mut R) -> io::Result<String> {

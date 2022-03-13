@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-use anyhow::Result;
+use crate::Result;
 
 /// Trait for clipboard access
 pub trait ClipboardProvider: Sized {

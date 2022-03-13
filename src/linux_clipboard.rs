@@ -1,7 +1,7 @@
 use crate::common::*;
 use crate::wayland_clipboard::WaylandClipboardContext;
 use crate::x11_clipboard::{Clipboard, X11ClipboardContext};
-use anyhow::Result;
+use crate::Result;
 
 enum LinuxContext {
     Wayland(WaylandClipboardContext),

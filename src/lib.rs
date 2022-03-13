@@ -71,7 +71,7 @@ extern crate x11_clipboard as x11_clipboard_crate;
 #[macro_use]
 extern crate objc;
 
-use anyhow::Result;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 mod common;
 pub use common::ClipboardProvider;
