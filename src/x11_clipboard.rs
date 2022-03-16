@@ -18,7 +18,7 @@ use crate::common::*;
 use crate::Result;
 use std::marker::PhantomData;
 use std::time::Duration;
-use x11_clipboard_crate::xcb::xproto::Atom;
+use x11_clipboard_crate::xcb::x::Atom;
 use x11_clipboard_crate::Atoms;
 use x11_clipboard_crate::Clipboard as X11Clipboard;
 
